@@ -17,7 +17,9 @@ requirements-dev.txt
 .idea
 .vscode
 
-# Foreign, uncommitted files that do not belong to this app and must never
-# ship in the backend image (see repo root git status / AGENTS.md context).
+# Uncommitted files from unrelated, in-progress work that happened to sit
+# in this working tree while this Dockerfile was written. Not part of this
+# app — excluded explicitly so an unrelated feature never ships inside this
+# image regardless of what else is present on disk at build time.
 app/api/claude_monitor.py
 app/services/claude_monitor.py
