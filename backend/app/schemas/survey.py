@@ -84,17 +84,15 @@ class WarningVerificationStatus(str, Enum):
     VERIFIED = "verified"
 
 
-class ValidationWarning(BaseModel):
+class ValidationWarning(ValidationIssue):
     """A single non-blocking (``warning``-level) checklist hint
     (User Stories 12-13): explanation, source and verification status are
     mandatory per ADR 0004 — a warning without them must not be constructible
     from a well-formed config record (enforced by the rules registry loader
-    in ticket 03, not by this response schema).
+    in ticket 03, not by this response schema). Shares ``field``/``code``/
+    ``message`` with ``ValidationIssue`` rather than redeclaring them.
     """
 
-    field: str
-    code: str
-    message: str
     explanation: str
     source: str
     verification_status: WarningVerificationStatus
