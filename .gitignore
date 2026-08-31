@@ -1,0 +1,33 @@
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+**/.venv/
+**/__pycache__/
+*.py[cod]
+**/.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js and frontend builds
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/coverage/
+*.tsbuildinfo
+
+# Test and tool output
+playwright-report/
+test-results/
+*.log
+
+# Editors and operating systems
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

@@ -1,0 +1,3 @@
+# Реестр аттестационных центров. MVP has exactly one record — Демо-АЦ.
+- code: demo
+  name: "Демо-АЦ"

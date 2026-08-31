@@ -1,0 +1,6 @@
+# Runtime dependencies. Versions are pinned exactly for reproducible installs.
+# Install with: pip install -r requirements.txt
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic-settings==2.15.0
+PyYAML==6.0.3

@@ -1,0 +1,7 @@
+# template registry: (ac_code, direction) -> .docx template.
+# MVP has exactly one record. The referenced file may not exist on disk yet —
+# it is added in ticket 02 (first end-to-end survey flow).
+- ac_code: demo
+  direction: equipment
+  template_path: templates/demo_equipment_application.docx
+  label: "Демонстрационный макет заявки — оборудование (Демо-АЦ)"
