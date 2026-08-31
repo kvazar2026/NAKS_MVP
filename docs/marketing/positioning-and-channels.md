@@ -6,6 +6,10 @@
 
 Связанный производственный план: [carousel-plan.md](carousel-plan.md).
 
+Стратегический контекст, рабочее название, ICP и направления расширения:
+[brand-and-growth-strategy.md](brand-and-growth-strategy.md). Проверяемые
+гипотезы вынесены в [growth-experiments.md](growth-experiments.md).
+
 ## Резюме
 
 - Первый рынок — предприятия России; основной пользователь — главный сварщик
