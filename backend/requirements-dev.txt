@@ -2,4 +2,8 @@
 # Install with: pip install -r requirements.txt -r requirements-dev.txt
 -r requirements.txt
 pytest==9.1.1
+# starlette.testclient (via fastapi==0.141.1) imports httpx2 first and only
+# falls back to the classic httpx package with a StarletteDeprecationWarning.
+# httpx2 is the correct, warning-free pin for this stack -- not a typo for
+# httpx. Verified: nothing in app/ or tests/ imports httpx directly.
 httpx2==2.12.0
