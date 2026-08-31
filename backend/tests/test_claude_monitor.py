@@ -58,3 +58,10 @@ def test_stopped_subagent_is_not_reported_as_working(tmp_path):
 
     assert snapshot.agents[1].status == "stopped"
     assert snapshot.agents[1].stopped_by_user is True
+
+
+def test_monitor_endpoint_is_registered(client):
+    response = client.get("/api/v1/agent-monitor/claude-code")
+
+    assert response.status_code == 200
+    assert {"available", "session_id", "updated_at", "agents"} <= response.json().keys()

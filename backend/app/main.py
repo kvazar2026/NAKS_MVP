@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.api.claude_monitor import router as claude_monitor_router
 from app.api.documents import router as documents_router
 from app.api.health import router as health_router
 from app.api.survey import router as survey_router
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="NAKS Prequalification API", lifespan=lifespan)
     app.include_router(health_router)
+    app.include_router(claude_monitor_router)
     app.include_router(survey_router)
     app.include_router(documents_router)
 
