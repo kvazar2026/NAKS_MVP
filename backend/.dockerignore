@@ -1,0 +1,23 @@
+# Reinstalled fresh in the image from requirements.txt — never copied in.
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
+
+# Dev/test-only, not needed at runtime.
+tests/
+pyproject.toml
+requirements-dev.txt
+
+# VCS / editor noise.
+.git
+.gitignore
+.idea
+.vscode
+
+# Foreign, uncommitted files that do not belong to this app and must never
+# ship in the backend image (see repo root git status / AGENTS.md context).
+app/api/claude_monitor.py
+app/services/claude_monitor.py

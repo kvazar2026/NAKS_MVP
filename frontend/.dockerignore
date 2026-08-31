@@ -1,0 +1,11 @@
+# Reinstalled fresh in the build stage / rebuilt by `npm run build` — never
+# copied in from the host.
+node_modules
+dist
+
+# VCS / editor noise.
+.git
+.gitignore
+.idea
+.vscode
+*.log

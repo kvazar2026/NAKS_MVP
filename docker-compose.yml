@@ -1,0 +1,47 @@
+# Local Docker Compose stack (ticket 07): backend + frontend + a reverse
+# proxy in front of both, for local iframe-scenario testing (see README.md
+# "Docker" section). Not a public/staging deployment — see docs/deployment.md
+# for that later step.
+#
+# Quick start: `cp .env.example .env` then `docker compose up --build`.
+
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      # Present after `cp .env.example .env` (see README). Future tickets
+      # that add backend env vars only need to extend .env.example — no
+      # compose changes required, this already forwards everything in it.
+      - ./.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  proxy:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${PROXY_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    restart: unless-stopped
