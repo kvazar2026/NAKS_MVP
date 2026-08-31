@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import App from './App'
 
 describe('App', () => {
-  it('renders the demo placeholder for the prequalification widget', () => {
+  it('renders the widget heading and the equipment survey form', () => {
     render(<App />)
 
     expect(
@@ -12,8 +12,7 @@ describe('App', () => {
         name: 'НАКС — виджет преквалификации (демо)',
       }),
     ).toBeTruthy()
-    expect(
-      screen.getByText('Опросник появится в следующем тикете.'),
-    ).toBeTruthy()
+    expect(screen.getByLabelText('ИНН организации')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Отправить заявку' })).toBeTruthy()
   })
 })

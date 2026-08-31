@@ -6,3 +6,53 @@
 body {
   margin: 0;
 }
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.demo-banner {
+  border: 1px solid #b58900;
+  background: rgba(181, 137, 0, 0.1);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+fieldset {
+  border: 1px solid #8888;
+  border-radius: 4px;
+  margin-block-end: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-block-end: 0.75rem;
+}
+
+.field label {
+  font-weight: 600;
+  margin-block-end: 0.25rem;
+}
+
+.field-error {
+  color: #c0392b;
+  font-size: 0.85rem;
+}
+
+.error-summary {
+  border: 1px solid #c0392b;
+  background: rgba(192, 57, 43, 0.08);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+}
+
+.radio-option,
+.checkbox-option {
+  display: block;
+  font-weight: normal;
+  margin-block-end: 0.35rem;
+}

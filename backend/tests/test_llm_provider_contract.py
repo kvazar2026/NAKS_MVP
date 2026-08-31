@@ -9,6 +9,7 @@ from app.schemas.llm import (
     NormalizationStatus,
 )
 from app.services.llm_provider import LLMProvider
+from app.services.mock_provider import MockProvider
 
 
 def test_llm_provider_cannot_be_instantiated_directly():
@@ -54,3 +55,24 @@ def test_llm_normalization_input_never_carries_pii_fields():
     schema_fields = set(LLMNormalizationInput.model_fields)
 
     assert schema_fields.isdisjoint(pii_fields)
+
+
+def test_mock_provider_returns_the_shared_result_shape():
+    """The spec's shared ``LLMProvider`` test suite, run against
+    ``MockProvider`` (always available — no ``ANTHROPIC_API_KEY`` needed).
+    ``AnthropicProvider`` joins this suite in ticket 04, skipped without a
+    real API key rather than failing.
+    """
+
+    provider = MockProvider()
+    data = LLMNormalizationInput(
+        equipment_type=" Источник питания ",
+        welding_method="РД",
+        purpose="Ремонт трубопроводов",
+    )
+
+    result = asyncio.run(provider.normalize(data))
+
+    assert isinstance(result, LLMNormalizationResult)
+    assert {field.field for field in result.fields} == {"equipment_type", "welding_method", "purpose"}
+    assert all(isinstance(field.status, NormalizationStatus) for field in result.fields)

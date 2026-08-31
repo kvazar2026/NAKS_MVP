@@ -5,11 +5,16 @@
 оборудования в НАКС. Контекст и правила проекта — `AGENTS.md`, спецификация —
 `.scratch/naks-mvp-core/spec.md`.
 
-Текущее состояние (тикет 01 «Каркас приложений и базовые контракты»):
-типизированный каркас backend и frontend без бизнес-логики опросника —
-health-эндпоинт, Pydantic-схемы будущих запросов/ответов, реестр АЦ, реестр
-шаблонов и абстрактный `LLMProvider`, плюс тестовая инфраструктура для обоих
-приложений. Сам опросник появится в тикете 02.
+Текущее состояние (тикет 02 «Первый сквозной пользовательский сценарий»):
+опросник по направлению «оборудование» работает целиком без iframe (прямой
+URL виджета — iframe-встраивание появится в тикете 05) — заполнение формы →
+`POST /api/v1/survey/validate` (структурная проверка → `MockProvider` →
+повторная проверка нормализованных значений по справочникам) →
+`POST /api/v1/documents/generate` (независимая повторная структурная
+проверка, не доверяющая клиенту) → скачивание реального `.docx`. Ничего не
+сохраняется на диске между запросами. Rate limiting, реальный
+`AnthropicProvider`, черновые (warning) правила по чек-листу и
+Playwright-e2e — в следующих тикетах.
 
 ## Структура репозитория
 
@@ -49,6 +54,18 @@ uvicorn app.main:app --reload
 Проверка: `GET http://127.0.0.1:8000/health` должен вернуть
 `{"status": "ok"}`.
 
+Демонстрационный `.docx`-шаблон (`backend/templates/demo_equipment_application.docx`,
+единственная запись `template registry`) закоммичен как бинарный файл, но
+его содержимое — читаемый Python-скрипт
+`backend/scripts/generate_demo_template.py`; при необходимости изменить
+текст/плейсхолдеры шаблона правьте скрипт и перегенерируйте файл:
+
+```bash
+cd backend
+.venv\Scripts\activate
+python scripts/generate_demo_template.py
+```
+
 ### Тесты
 
 ```bash
@@ -70,13 +87,20 @@ npm install
 
 ### Запуск
 
+Виджет вызывает backend по относительным путям (`/api/v1/...`), поэтому для
+рабочего сквозного сценария нужны оба процесса одновременно: backend
+(`uvicorn`, см. выше, по умолчанию `http://127.0.0.1:8000`) и frontend.
+
 ```bash
 cd frontend
 npm run dev
 ```
 
 Vite поднимет dev-сервер (по умолчанию `http://localhost:5173`) и выведет
-точный адрес в консоли.
+точный адрес в консоли. Dev-сервер сам проксирует `/api/...` на backend
+(`vite.config.ts`, `server.proxy`) — это тот же приём, что позже даст
+reverse proxy в Docker Compose (тикет 07), поэтому CORS backend не
+настраивает.
 
 ### Тесты
 
@@ -116,8 +140,9 @@ docker compose up --build
 - `http://localhost:8080/` — виджет (frontend).
 - `http://localhost:8080/health` — health-эндпоинт backend, должен вернуть
   `{"status": "ok"}`.
-- `http://localhost:8080/api/...` — публичные эндпоинты backend (появятся в
-  тикете 02; сейчас у backend есть только `/health`).
+- `http://localhost:8080/api/v1/survey/validate`,
+  `http://localhost:8080/api/v1/documents/generate` — публичные эндпоинты
+  backend (тикет 02).
 
 Порт `8080` настраивается переменной `PROXY_PORT` в `.env`. Наружу
 опубликован только `proxy` — у backend и frontend есть собственные
