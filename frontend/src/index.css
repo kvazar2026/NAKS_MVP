@@ -1,10 +1,38 @@
 :root {
-  color-scheme: light dark;
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
   margin: 0;
+}
+
+/* Embedding shell (ticket 05). The theme comes from the `theme` query
+   parameter, but only ever as one of a closed set of values matched here —
+   no CSS ever arrives from the URL itself. */
+.embed-root {
+  color-scheme: light;
+  background: #ffffff;
+  color: #18181b;
+  min-height: 100%;
+}
+
+.embed-root[data-theme='dark'] {
+  color-scheme: dark;
+  background: #18181b;
+  color: #f4f4f5;
+}
+
+.embed-root[data-theme='dark'] fieldset {
+  border-color: #52525b;
+}
+
+.embed-root[data-theme='dark'] .field-error {
+  color: #f87171;
+}
+
+.embed-root[data-theme='dark'] .error-summary {
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
 }
 
 main {
