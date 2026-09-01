@@ -42,6 +42,19 @@ describe('resolveEmbedConfig', () => {
     expect(config.partner.id).toBe('demo')
     expect(config.didFallBackToDemoPartner).toBe(false)
   })
+
+  it.each(['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__'])(
+    'does not treat the inherited property %j as a known partner',
+    (probe) => {
+      // A bare PARTNERS[key] lookup reaches Object.prototype, so these would
+      // pass as recognised partners and put a Function into config.partner.
+      const config = resolveEmbedConfig(`?partner=${encodeURIComponent(probe)}`)
+
+      expect(config.partner.id).toBe('demo')
+      expect(config.partner.label).toBe('Демо-АЦ')
+      expect(config.didFallBackToDemoPartner).toBe(true)
+    },
+  )
 })
 
 describe('parseAllowedParentOrigins', () => {

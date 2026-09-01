@@ -26,7 +26,7 @@ than the flat form. Add nesting when a real rule requires it.
 
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, get_origin
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -110,8 +110,9 @@ def _resolve(data: SurveyData, path: str) -> Any:
     return value
 
 
-def _assert_path_exists(path: str) -> None:
-    """Fail config loading on a field path ``SurveyData`` does not have.
+def _resolve_annotation(path: str) -> Any:
+    """Type of the field at ``path``, or raise if ``SurveyData`` has no such
+    path.
 
     Without this a mistyped path would raise only when some submission
     happened to trigger the rule — i.e. a latent 500 instead of a startup
@@ -130,6 +131,26 @@ def _assert_path_exists(path: str) -> None:
             raise ValueError(f"Invalid field path '{path}': survey data has no field '{part}'")
         annotation = fields[part].annotation
         walked.append(part)
+    return annotation
+
+
+def _assert_path_exists(path: str) -> None:
+    _resolve_annotation(path)
+
+
+def _assert_path_is_a_list(path: str) -> None:
+    """``not_equals_length_of`` only means anything against a list.
+
+    Checking existence alone was not enough: a path to an ``int`` loaded fine
+    and then raised ``TypeError`` on the first matching request, and a path to
+    a ``str`` silently compared string length — exactly the latent-500 class
+    the path check exists to prevent.
+    """
+
+    if get_origin(_resolve_annotation(path)) is not list:
+        raise ValueError(
+            f"Invalid 'not_equals_length_of' target '{path}': it must point at a list field"
+        )
 
 
 def _predicate_matches(predicate: FieldPredicate, data: SurveyData) -> bool:
@@ -196,6 +217,6 @@ class WarningRulesRegistry:
             for predicate in predicates:
                 _assert_path_exists(predicate.field)
                 if predicate.not_equals_length_of is not None:
-                    _assert_path_exists(predicate.not_equals_length_of)
+                    _assert_path_is_a_list(predicate.not_equals_length_of)
 
         return cls(rules)

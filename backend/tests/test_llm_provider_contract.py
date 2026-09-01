@@ -2,8 +2,14 @@
 
 Every provider in ``_PROVIDER_FACTORIES`` runs the same assertions. Adding a
 vendor means adding one entry here — plus its credential variable in
-``_REQUIRED_ENV`` if it needs one — not writing a new suite. A real provider
-without credentials in the environment is skipped, never failed.
+``_REQUIRED_ENV`` if it needs one — not writing a new suite.
+
+Runs that reach a real vendor need **two** things: the credentials, and
+``NAKS_RUN_LIVE_LLM_TESTS=1``. Credentials alone are not enough on purpose —
+a developer with a key exported for ordinary work would otherwise have a
+plain ``pytest`` spend money and depend on the network, and these assertions
+are about the contract, not about a vendor being reachable today. Anything
+missing means skip, never fail.
 """
 
 import asyncio
@@ -31,17 +37,23 @@ _PROVIDER_FACTORIES = {
     ),
 }
 
-# Providers that reach a vendor over the network, and the variable that has to
-# be present for their run to be meaningful.
+# Providers that reach a vendor over the network, and the credential that has
+# to be present for their run to be meaningful.
 _REQUIRED_ENV = {"anthropic": "ANTHROPIC_API_KEY"}
+
+# Explicit opt-in for every live vendor run, on top of the credential.
+LIVE_RUN_ENV = "NAKS_RUN_LIVE_LLM_TESTS"
 
 
 @pytest.fixture(params=sorted(_PROVIDER_FACTORIES))
 def provider(request) -> LLMProvider:
     name = request.param
     required = _REQUIRED_ENV.get(name)
-    if required and not os.environ.get(required):
-        pytest.skip(f"{required} is not set — skipping the '{name}' provider contract run")
+    if required:
+        if os.environ.get(LIVE_RUN_ENV) != "1":
+            pytest.skip(f"set {LIVE_RUN_ENV}=1 to run the live '{name}' provider contract tests")
+        if not os.environ.get(required):
+            pytest.skip(f"{required} is not set — skipping the live '{name}' provider contract run")
     return _PROVIDER_FACTORIES[name]()
 
 

@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Without this the browser probes /favicon.ico and logs a 404, which
+         would be noise in the console-error check of the e2e test (ticket 08). -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Пример встраивания виджета НАКС</title>
     <style>
       body {

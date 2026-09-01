@@ -24,16 +24,49 @@ interface EmbedContainerProps {
  */
 function EmbedContainer({ config, allowedParentOrigins, parentOrigin, children }: EmbedContainerProps) {
   const rootRef = useRef<HTMLDivElement>(null)
+  // Held in a ref, not state: an allowlisted host can identify itself at any
+  // time (see below) and that must not re-run the effect and re-register the
+  // observer and listener.
+  const targetOriginRef = useRef<string | null>(parentOrigin)
+
+  useEffect(() => {
+    targetOriginRef.current = parentOrigin
+  }, [parentOrigin])
+
+  // Mirrored onto the document root as well as the wrapper below. The
+  // wrapper's attribute drives the widget's own dark styles; the root's
+  // paints the iframe canvas, which the wrapper cannot do without stretching
+  // itself — and its height is exactly what auto-resize reports to the host.
+  useEffect(() => {
+    document.documentElement.dataset.theme = config.theme
+  }, [config.theme])
 
   useEffect(() => {
     const element = rootRef.current
-    if (element === null || parentOrigin === null || window.parent === window) {
-      // Not embedded, or embedded by a host we are not allowed to talk to.
-      return
+    if (element === null || window.parent === window) {
+      return // Not embedded at all.
     }
 
     const postHeight = () => {
-      window.parent.postMessage(buildResizeMessage(element.offsetHeight), parentOrigin)
+      const message = buildResizeMessage(element.offsetHeight)
+      const resolved = targetOriginRef.current
+      if (resolved !== null) {
+        window.parent.postMessage(message, resolved)
+        return
+      }
+      // Host not resolvable from the referrer (referrerpolicy="no-referrer",
+      // or an HTTPS page framed over HTTP). Address every allowlisted origin
+      // instead of giving up: postMessage only delivers when targetOrigin
+      // equals the parent's real origin, so the browser itself picks the one
+      // that matches and drops the rest. That is still never "*" — a host the
+      // operator did not allowlist receives nothing.
+      //
+      // Waiting to be asked instead does not work: a message posted before
+      // this component mounts is not queued anywhere, so a host that asks on
+      // iframe `load` is simply never heard.
+      for (const origin of allowedParentOrigins) {
+        window.parent.postMessage(message, origin)
+      }
     }
 
     postHeight()
@@ -47,6 +80,14 @@ function EmbedContainer({ config, allowedParentOrigins, parentOrigin, children }
       if (!isAllowedOrigin(allowedParentOrigins, event.origin) || !isSizeRequest(event.data)) {
         return
       }
+      // An allowlisted host has identified itself. This is the only way to
+      // learn the target origin when the referrer is missing — a host using
+      // `referrerpolicy="no-referrer"`, or an HTTPS page framed over HTTP,
+      // is allowlisted but unresolvable from the referrer alone. Without
+      // this the listener used to be skipped entirely for such a host, so it
+      // got no auto-resize and no way to ask for one, and the iframe stayed
+      // at its initial height with the form clipped.
+      targetOriginRef.current = event.origin
       postHeight()
     }
 
@@ -56,7 +97,7 @@ function EmbedContainer({ config, allowedParentOrigins, parentOrigin, children }
       observer.disconnect()
       window.removeEventListener('message', handleMessage)
     }
-  }, [allowedParentOrigins, parentOrigin])
+  }, [allowedParentOrigins])
 
   return (
     <div ref={rootRef} className="embed-root" data-theme={config.theme}>

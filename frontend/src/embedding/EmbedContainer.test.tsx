@@ -81,10 +81,63 @@ describe('EmbedContainer messaging', () => {
     expect(postMessageToParent.mock.calls[0][1]).toBe(HOST_ORIGIN)
   })
 
-  it('posts nothing when the host origin is not on the allowlist', () => {
+  it('addresses every allowlisted origin — and only those — when the referrer is missing', () => {
+    // A host using referrerpolicy="no-referrer" (or an HTTPS page framed over
+    // HTTP) is allowlisted but unresolvable from the referrer, so it reaches
+    // this component as parentOrigin: null. Addressing each allowlisted
+    // origin is safe because postMessage only delivers when targetOrigin
+    // matches the parent's real origin — the browser picks the right one and
+    // drops the rest (verified in Chromium: an allowlisted host receives the
+    // height, a non-allowlisted one receives nothing). jsdom does no such
+    // filtering, so here we can only assert who was addressed.
+    renderContainer({
+      parentOrigin: null,
+      allowedParentOrigins: [HOST_ORIGIN, 'https://second-host.example'],
+    })
+
+    const targets = postMessageToParent.mock.calls.map(([, target]) => target)
+    expect(targets).toEqual([HOST_ORIGIN, 'https://second-host.example'])
+    expect(targets).not.toContain('*')
+  })
+
+  it('waiting to be asked is not enough, so it announces on mount', () => {
+    // A host that posts request-size on iframe `load` may well do so before
+    // this component mounts, and that message is not queued anywhere — the
+    // announce above is what makes the no-referrer case work at all.
     renderContainer({ parentOrigin: null })
 
-    expect(postMessageToParent).not.toHaveBeenCalled()
+    expect(postMessageToParent).toHaveBeenCalledTimes(1)
+    expect(postMessageToParent.mock.calls[0][0].type).toBe(RESIZE_MESSAGE_TYPE)
+  })
+
+  it('pins to an allowlisted host once it identifies itself', () => {
+    renderContainer({
+      parentOrigin: null,
+      allowedParentOrigins: [HOST_ORIGIN, 'https://second-host.example'],
+    })
+    postMessageToParent.mockClear()
+
+    window.dispatchEvent(
+      new MessageEvent('message', { origin: HOST_ORIGIN, data: { type: SIZE_REQUEST_MESSAGE_TYPE } }),
+    )
+    postMessageToParent.mockClear()
+    resizeCallbacks.forEach((callback) => callback())
+
+    // No longer fanned out across the allowlist.
+    expect(postMessageToParent.mock.calls.map(([, target]) => target)).toEqual([HOST_ORIGIN])
+  })
+
+  it('does not let a non-allowlisted origin identify itself as the host', () => {
+    renderContainer({ parentOrigin: null, allowedParentOrigins: [HOST_ORIGIN] })
+
+    window.dispatchEvent(
+      new MessageEvent('message', { origin: 'https://evil.example', data: { type: SIZE_REQUEST_MESSAGE_TYPE } }),
+    )
+    postMessageToParent.mockClear()
+    resizeCallbacks.forEach((callback) => callback())
+
+    // Still only the allowlist — evil.example never became the target.
+    expect(postMessageToParent.mock.calls.map(([, target]) => target)).toEqual([HOST_ORIGIN])
   })
 
   it('answers a size request from an allowed origin', () => {
@@ -121,10 +174,13 @@ describe('EmbedContainer messaging', () => {
 })
 
 describe('EmbedContainer rendering', () => {
-  it('applies the resolved theme as a data attribute', () => {
+  it('applies the resolved theme to the widget wrapper and the document root', () => {
+    // The wrapper attribute drives the widget's own dark styles; the document
+    // root's paints the iframe canvas behind them.
     const { container } = renderContainer({ config: { ...BASE_CONFIG, theme: 'dark' } })
 
     expect(container.querySelector('.embed-root')?.getAttribute('data-theme')).toBe('dark')
+    expect(document.documentElement.dataset.theme).toBe('dark')
   })
 
   it('shows a notice when an unknown partner fell back to the demo configuration', () => {

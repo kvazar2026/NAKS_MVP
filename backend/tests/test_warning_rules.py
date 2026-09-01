@@ -130,6 +130,24 @@ def test_duplicate_rule_codes_fail_to_load(tmp_path):
         _registry_from(tmp_path, _COMPLETE_RULE + _COMPLETE_RULE)
 
 
+@pytest.mark.parametrize("scalar_target", ["equipment.quantity", "region"])
+def test_length_comparison_against_a_non_list_fails_to_load(tmp_path, scalar_target):
+    """Checking only that the path exists was not enough: an int target used
+    to load fine and then raise TypeError on the first matching request, and a
+    str target silently compared string length.
+    """
+
+    record = {
+        **_COMPLETE_RULE_RECORD,
+        "condition": {
+            "all_of": [{"field": "equipment.quantity", "not_equals_length_of": scalar_target}]
+        },
+    }
+
+    with pytest.raises(ValueError, match="must point at a list"):
+        _registry_from_records(tmp_path, [record])
+
+
 # --- evaluation -------------------------------------------------------------
 
 

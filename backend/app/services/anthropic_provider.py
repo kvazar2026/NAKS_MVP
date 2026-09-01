@@ -38,6 +38,11 @@ from app.services.llm_provider import LLMProvider, LLMProviderError
 
 _CLASSIFIED_FIELDS = ("equipment_type", "welding_method", "purpose")
 
+# The endpoint calling this is user-facing, so a hung vendor connection must
+# not outlive the user's patience (SDK defaults are 600s / 2 retries).
+DEFAULT_TIMEOUT_SECONDS = 20.0
+DEFAULT_MAX_RETRIES = 1
+
 
 class _ProviderFieldResult(BaseModel):
     """Stricter than ``LLMFieldResult``: the field name is a closed set, so a
@@ -110,11 +115,27 @@ class AnthropicProvider(LLMProvider):
         *,
         client: object | None = None,
         max_tokens: int = 2048,
+        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        max_retries: int = DEFAULT_MAX_RETRIES,
     ) -> None:
         # `client` is an injection point for tests, which exercise this class
         # against a stub instead of the network. Production always builds the
         # real async client here.
-        self._client = client if client is not None else anthropic.AsyncAnthropic(api_key=api_key)
+        #
+        # Timeout and retries are set explicitly: the SDK defaults (600s read,
+        # 2 retries) would let a stalled vendor connection hold a single
+        # /survey/validate request open for something like half an hour. This
+        # endpoint is user-facing — failing fast and showing the generic
+        # "try again later" message beats an indefinite spinner.
+        self._client = (
+            client
+            if client is not None
+            else anthropic.AsyncAnthropic(
+                api_key=api_key,
+                timeout=timeout_seconds,
+                max_retries=max_retries,
+            )
+        )
         self._model = model
         self._max_tokens = max_tokens
 
@@ -134,6 +155,15 @@ class AnthropicProvider(LLMProvider):
         except anthropic.AnthropicError as error:
             # Vendor exception types stop here (see LLMProviderError).
             raise LLMProviderError(f"Anthropic request failed: {type(error).__name__}") from error
+        except ValidationError as error:
+            # `messages.parse` validates the model's JSON itself, inside the
+            # SDK (`lib/_parse/_response.py` -> TypeAdapter.validate_json), and
+            # a pydantic ValidationError is NOT an AnthropicError — so without
+            # this branch a truncated or non-JSON answer would escape as a
+            # vendor-layer exception, past the guarantee above and past this
+            # provider's own checks below. `max_tokens` truncation is the
+            # realistic way to hit it.
+            raise LLMProviderError("Anthropic response was not valid structured output") from error
 
         parsed = getattr(response, "parsed_output", None)
         if parsed is None:

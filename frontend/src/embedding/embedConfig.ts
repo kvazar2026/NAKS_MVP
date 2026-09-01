@@ -57,7 +57,15 @@ export function resolveEmbedConfig(search: string): EmbedConfig {
   const requestedTheme = params.get('theme')
   const requestedPartner = params.get('partner')
 
-  const knownPartner = requestedPartner === null ? undefined : PARTNERS[requestedPartner]
+  // Object.hasOwn, not a plain `PARTNERS[key]` lookup: a bare index also
+  // reaches Object.prototype, so `?partner=constructor` (or toString,
+  // valueOf, __proto__) would count as a known partner — suppressing the
+  // unknown-partner notice and putting a Function where a PartnerConfig
+  // belongs.
+  const knownPartner =
+    requestedPartner !== null && Object.hasOwn(PARTNERS, requestedPartner)
+      ? PARTNERS[requestedPartner]
+      : undefined
 
   return {
     theme: isTheme(requestedTheme) ? requestedTheme : DEFAULT_THEME,

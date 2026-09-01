@@ -2,24 +2,35 @@
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
-body {
-  margin: 0;
-}
+/* Theme (ticket 05) is applied at the document root, not on the widget's own
+   wrapper: the iframe canvas is painted by html/body, so a background set
+   only on the wrapper left everything below the content showing the
+   browser's default white — glaring in the dark theme. It cannot be fixed by
+   stretching the wrapper instead, because the wrapper's height is exactly
+   what gets reported to the host for auto-resize.
 
-/* Embedding shell (ticket 05). The theme comes from the `theme` query
-   parameter, but only ever as one of a closed set of values matched here —
-   no CSS ever arrives from the URL itself. */
-.embed-root {
+   The value comes from the `theme` query parameter but only ever as one of a
+   closed set matched here — no CSS ever arrives from the URL itself. */
+:root {
   color-scheme: light;
   background: #ffffff;
   color: #18181b;
-  min-height: 100%;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  background: #18181b;
+  color: #f4f4f5;
+}
+
+body {
+  margin: 0;
+  background: inherit;
+  color: inherit;
 }
 
 .embed-root[data-theme='dark'] {
   color-scheme: dark;
-  background: #18181b;
-  color: #f4f4f5;
 }
 
 .embed-root[data-theme='dark'] fieldset {

@@ -11,9 +11,14 @@ from types import SimpleNamespace
 
 import anthropic
 import pytest
+from pydantic import ValidationError
 
 from app.schemas.llm import LLMNormalizationInput, NormalizationStatus
-from app.services.anthropic_provider import AnthropicProvider
+from app.services.anthropic_provider import (
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_TIMEOUT_SECONDS,
+    AnthropicProvider,
+)
 from app.services.llm_provider import LLMProviderError
 
 WELL_FORMED = {
@@ -143,6 +148,33 @@ def test_vendor_exception_is_translated_so_it_never_escapes_as_a_vendor_type(sam
 
     with pytest.raises(LLMProviderError):
         asyncio.run(provider.normalize(sample_input))
+
+
+def test_sdk_side_json_validation_failure_is_translated_too(sample_input):
+    """`messages.parse` validates the model's JSON inside the SDK and raises a
+    pydantic ValidationError, which is NOT an AnthropicError — the realistic
+    trigger being a `max_tokens`-truncated answer. Without its own branch it
+    escapes past the "no vendor-layer exception reaches the caller" guarantee.
+    """
+
+    truncated = ValidationError.from_exception_data("_ProviderResponse", [])
+    provider, _ = _provider(truncated)
+
+    with pytest.raises(LLMProviderError):
+        asyncio.run(provider.normalize(sample_input))
+
+
+def test_client_is_built_with_a_bounded_timeout_and_retry_budget():
+    """SDK defaults (600s read, 2 retries) would let a stalled vendor
+    connection hold one user-facing /survey/validate request open for about
+    half an hour.
+    """
+
+    provider = AnthropicProvider(api_key="test-key", model="claude-sonnet-5")
+
+    assert provider._client.timeout == DEFAULT_TIMEOUT_SECONDS
+    assert provider._client.max_retries == DEFAULT_MAX_RETRIES
+    assert DEFAULT_TIMEOUT_SECONDS <= 60
 
 
 def test_prompt_lists_the_canonical_reference_labels(sample_input):
