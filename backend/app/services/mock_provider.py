@@ -1,7 +1,8 @@
-"""``MockProvider`` — deterministic ``LLMProvider`` used whenever there is no
-``ANTHROPIC_API_KEY`` (spec, User Story 24), which in this ticket is always:
-provider selection based on the environment variable is ``AnthropicProvider``'s
-job (ticket 04) — this ticket wires ``MockProvider`` directly.
+"""``MockProvider`` — deterministic ``LLMProvider`` for development and tests
+without a vendor account (spec, User Story 24). Selected by name, like every
+other provider: ``NAKS_LLM_PROVIDER=mock`` (the default). It is never
+substituted in automatically behind an operator's back — see
+``app/services/provider_registry.py``.
 
 Matching is deliberately simple (case/whitespace-insensitive exact or
 synonym match against ``app/domain/reference_data.py``) and fully

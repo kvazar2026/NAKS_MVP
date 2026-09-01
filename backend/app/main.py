@@ -1,11 +1,13 @@
 """FastAPI application factory.
 
-Ticket 02 wires up the two business endpoints
-(``/api/v1/survey/validate``, ``/api/v1/documents/generate``) on top of the
-ticket 01 scaffold: config-driven registries, ``MockProvider`` as the
-``LLMProvider`` (real provider selection based on ``ANTHROPIC_API_KEY`` is
-ticket 04 — this ticket always uses ``MockProvider``), structured PII-free
+Wires up the two business endpoints (``/api/v1/survey/validate``,
+``/api/v1/documents/generate``): config-driven registries, the ``LLMProvider``
+chosen by name from the provider registry (ticket 04), structured PII-free
 logging, and a generic-message handler for unhandled errors (User Story 18).
+
+Everything here loads at startup and fails loudly if it cannot: a malformed
+registry file or a provider without credentials stops the app rather than
+surfacing as a broken request later.
 """
 
 from contextlib import asynccontextmanager
@@ -20,7 +22,7 @@ from app.api.survey import router as survey_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging, log_outcome
 from app.services.ac_registry import AttestationCenterRegistry
-from app.services.mock_provider import MockProvider
+from app.services.provider_registry import build_llm_provider
 from app.services.template_registry import TemplateRegistry
 from app.services.warning_rules import WarningRulesRegistry
 
@@ -32,7 +34,7 @@ async def lifespan(app: FastAPI):
     app.state.template_registry = TemplateRegistry.from_yaml(settings.template_registry_path)
     app.state.ac_registry = AttestationCenterRegistry.from_yaml(settings.ac_registry_path)
     app.state.warning_rules = WarningRulesRegistry.from_yaml(settings.warning_rules_path)
-    app.state.llm_provider = MockProvider()
+    app.state.llm_provider = build_llm_provider(settings)
     yield
 
 

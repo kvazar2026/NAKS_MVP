@@ -13,3 +13,8 @@ python-docx==1.2.0
 lxml==6.1.2
 Jinja2==3.1.6
 MarkupSafe==3.0.3
+# Anthropic SDK for AnthropicProvider (ticket 04). Runtime, not dev-only: it
+# is imported by app/services/provider_registry.py at startup regardless of
+# which provider is selected. Only reached over the network when
+# NAKS_LLM_PROVIDER=anthropic.
+anthropic==1.2.0
