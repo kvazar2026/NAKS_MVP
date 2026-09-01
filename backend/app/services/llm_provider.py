@@ -10,6 +10,16 @@ from abc import ABC, abstractmethod
 from app.schemas.llm import LLMNormalizationInput, LLMNormalizationResult
 
 
+class LLMProviderError(RuntimeError):
+    """A provider could not produce a result conforming to the contract.
+
+    Implementations raise this instead of letting a vendor SDK's own exception
+    types escape, so callers never have to know which vendor is configured.
+    The API layer turns it into the one generic, non-technical message the
+    user is allowed to see (User Story 18) — vendor details stay in the logs.
+    """
+
+
 class LLMProvider(ABC):
     """LLM role is limited to normalization and reference-list classification
     of free-text survey fields (ADR 0001) — never engineering calculations,

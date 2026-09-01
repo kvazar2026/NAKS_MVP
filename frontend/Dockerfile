@@ -12,6 +12,15 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+
+# Host origins allowed to embed the widget (ticket 05). Vite inlines VITE_*
+# variables at build time, so this has to be a build arg rather than a
+# runtime env var — changing it requires rebuilding the image. Empty (the
+# default) means same-origin only, which is what the bundled demo page at
+# /embed-demo.html uses.
+ARG VITE_ALLOWED_PARENT_ORIGINS=""
+ENV VITE_ALLOWED_PARENT_ORIGINS=$VITE_ALLOWED_PARENT_ORIGINS
+
 RUN npm run build
 
 # ---- runtime ----

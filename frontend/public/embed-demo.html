@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Without this the browser probes /favicon.ico and logs a 404, which
+         would be noise in the console-error check of the e2e test (ticket 08). -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Пример встраивания виджета НАКС</title>
+    <style>
+      body {
+        font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 2rem 1rem;
+        background: #f4f4f5;
+        color: #18181b;
+      }
+      .page {
+        max-width: 780px;
+        margin: 0 auto;
+      }
+      .host-note {
+        border: 1px solid #b58900;
+        background: rgba(181, 137, 0, 0.1);
+        border-radius: 4px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+      }
+      iframe {
+        width: 100%;
+        border: 1px solid #d4d4d8;
+        border-radius: 6px;
+        background: #fff;
+        display: block;
+      }
+      pre {
+        background: #18181b;
+        color: #f4f4f5;
+        padding: 1rem;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-size: 0.85rem;
+      }
+      .controls a {
+        margin-inline-end: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <h1>Страница партнёра (пример)</h1>
+      <p class="host-note">
+        Это тестовая страница встраивания из репозитория, а не реальный сайт партнёра. Виджет ниже загружен через
+        <code>&lt;iframe&gt;</code> и сам сообщает свою высоту через <code>postMessage</code>.
+      </p>
+
+      <p class="controls">
+        Открыть с разными параметрами:
+        <a href="?theme=light&partner=demo">светлая тема</a>
+        <a href="?theme=dark&partner=demo">тёмная тема</a>
+        <a href="?theme=neon&partner=unknown-partner">неизвестные значения</a>
+      </p>
+
+      <iframe id="naks-widget" title="Виджет преквалификации НАКС" height="400"></iframe>
+
+      <h2>Как встроить у себя</h2>
+      <pre><code>&lt;iframe
+  src="https://ВАШ-ХОСТ/?theme=light&amp;partner=demo"
+  title="Виджет преквалификации НАКС"
+  width="100%"
+  height="400"
+  style="border: 0"&gt;&lt;/iframe&gt;
+
+&lt;script&gt;
+  // Origin виджета. Проверка обязательна: без неё любое встроенное
+  // содержимое сможет менять высоту вашего iframe.
+  var WIDGET_ORIGIN = 'https://ВАШ-ХОСТ'
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== WIDGET_ORIGIN) return
+    if (!event.data || event.data.type !== 'naks-widget:resize') return
+    document.getElementById('naks-widget').height = event.data.height
+  })
+&lt;/script&gt;</code></pre>
+
+      <p>
+        Чтобы виджет отправлял сообщения на ваш домен, его нужно собрать с переменной
+        <code>VITE_ALLOWED_PARENT_ORIGINS</code>, содержащей origin вашей страницы (см.
+        <code>.env.example</code>). Без этого виджет считает хост неизвестным и не отправляет ничего — он никогда не
+        рассылает сообщения на <code>*</code>.
+      </p>
+    </div>
+
+    <script>
+      // The widget is served from this same origin, so the demo works with the
+      // default VITE_ALLOWED_PARENT_ORIGINS (same-origin only).
+      var WIDGET_ORIGIN = window.location.origin
+      var frame = document.getElementById('naks-widget')
+
+      // Forward this page's own query parameters to the widget, so the links
+      // above exercise theme/partner handling.
+      frame.src = WIDGET_ORIGIN + '/' + window.location.search
+
+      window.addEventListener('message', function (event) {
+        if (event.origin !== WIDGET_ORIGIN) return
+        if (!event.data || event.data.type !== 'naks-widget:resize') return
+        frame.height = event.data.height
+      })
+
+      // Ask the widget to re-report its height after the host page's own
+      // layout settles (exercises the incoming-message path).
+      window.addEventListener('load', function () {
+        frame.contentWindow.postMessage({ type: 'naks-widget:request-size' }, WIDGET_ORIGIN)
+      })
+    </script>
+  </body>
+</html>

@@ -25,6 +25,10 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        # Build-time, not runtime: Vite inlines VITE_* into the bundle, so
+        # changing this needs `docker compose build frontend` (ticket 05).
+        VITE_ALLOWED_PARENT_ORIGINS: ${WIDGET_ALLOWED_PARENT_ORIGINS:-}
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 10s

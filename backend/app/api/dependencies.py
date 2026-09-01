@@ -9,6 +9,7 @@ from fastapi import Request
 from app.services.ac_registry import AttestationCenterRegistry
 from app.services.llm_provider import LLMProvider
 from app.services.template_registry import TemplateRegistry
+from app.services.warning_rules import WarningRulesRegistry
 
 
 def get_ac_registry(request: Request) -> AttestationCenterRegistry:
@@ -21,3 +22,7 @@ def get_template_registry(request: Request) -> TemplateRegistry:
 
 def get_llm_provider(request: Request) -> LLMProvider:
     return request.app.state.llm_provider
+
+
+def get_warning_rules(request: Request) -> WarningRulesRegistry:
+    return request.app.state.warning_rules

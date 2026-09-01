@@ -12,13 +12,14 @@ import time
 
 from fastapi import APIRouter, Depends
 
-from app.api.dependencies import get_ac_registry, get_llm_provider
+from app.api.dependencies import get_ac_registry, get_llm_provider, get_warning_rules
 from app.core.logging import log_outcome
 from app.schemas.llm import LLMFieldResult, LLMNormalizationInput
 from app.schemas.survey import NormalizedSurveyData, SurveyValidateRequest, SurveyValidateResponse, ValidationIssue
 from app.services.ac_registry import AttestationCenterRegistry
 from app.services.llm_provider import LLMProvider
 from app.services.validation import validate_classified_fields, validate_common_structural
+from app.services.warning_rules import WarningRulesRegistry
 
 router = APIRouter()
 
@@ -37,6 +38,7 @@ async def validate_survey(
     request: SurveyValidateRequest,
     ac_registry: AttestationCenterRegistry = Depends(get_ac_registry),
     llm_provider: LLMProvider = Depends(get_llm_provider),
+    warning_rules: WarningRulesRegistry = Depends(get_warning_rules),
 ) -> SurveyValidateResponse:
     started_at = time.perf_counter()
     direction = request.attestation_direction.value
@@ -89,8 +91,14 @@ async def validate_survey(
             }
         ),
     )
+    # Checklist hints run last, on normalized data: they compare against the
+    # canonical reference-list labels, which only exist after normalization
+    # (ticket 03). They never block — a matched rule still returns valid=True
+    # and the document still generates (ADR 0004).
+    warnings = warning_rules.evaluate(normalized_data)
+
     _log(started_at, direction, "success", [])
-    return SurveyValidateResponse(valid=True, normalized_data=normalized_data)
+    return SurveyValidateResponse(valid=True, normalized_data=normalized_data, warnings=warnings)
 
 
 def _log(started_at: float, direction: str, result: str, errors: list[ValidationIssue]) -> None:

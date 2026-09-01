@@ -54,11 +54,22 @@ function ResultScreen({ normalizedData, warnings, onRestart }: ResultScreenProps
       {warnings.length > 0 && (
         <div role="note" aria-label="Предупреждения">
           <h3>Обратите внимание</h3>
+          {/* ADR 0004: checklist hints are non-blocking and explicitly
+              provisional — the disclaimer sits above the list so it cannot be
+              missed, and the download button below stays enabled regardless. */}
+          <p>
+            Предварительная автоматическая проверка, требует подтверждения специалистом или АЦ. Эти замечания не
+            мешают скачать заявку.
+          </p>
           <ul>
             {warnings.map((warning) => (
               <li key={`${warning.field}-${warning.code}`}>
-                {warning.message} — {warning.explanation} (источник: {warning.source}, требует подтверждения
-                специалистом или АЦ)
+                <strong>{warning.message}</strong>
+                <p>{warning.explanation}</p>
+                <p>
+                  Источник: {warning.source}
+                  {warning.verification_status === 'not_verified_by_expert' && ' · не проверено экспертом НАКС'}
+                </p>
               </li>
             ))}
           </ul>

@@ -7,9 +7,19 @@ from app.main import create_app
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client(monkeypatch) -> TestClient:
     # TestClient's context manager triggers the app's lifespan (startup),
-    # which is what loads the template/AC registries from YAML.
+    # which is what loads the registries from YAML and builds the configured
+    # LLMProvider.
+    #
+    # The provider is pinned to the mock here on purpose. Startup reads the
+    # ambient environment, so without this a developer (or CI box) with
+    # NAKS_LLM_PROVIDER=anthropic exported would have these HTTP-contract
+    # tests fail at setup — or, with a key also exported, quietly make real
+    # billed API calls. These tests are about this app's behaviour, not a
+    # vendor's; the live vendor run has its own opt-in in
+    # test_llm_provider_contract.py.
+    monkeypatch.setenv("NAKS_LLM_PROVIDER", "mock")
     with TestClient(create_app()) as test_client:
         yield test_client
 

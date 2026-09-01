@@ -204,6 +204,68 @@ def test_unclassifiable_welding_method_blocks_after_llm_normalization(client, va
     )
 
 
+def test_checklist_warning_does_not_block_and_still_generates_a_document(client, valid_survey_payload):
+    """A matched checklist rule is a hint, not a gate (ADR 0004): the response
+    stays ``valid=True`` and the document generates from the same data.
+    """
+
+    # Five units declared, two serial numbers listed.
+    valid_survey_payload["equipment"]["quantity"] = 5
+
+    response = client.post(ENDPOINT, json=valid_survey_payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["valid"] is True
+    assert body["errors"] == []
+
+    warning = next(w for w in body["warnings"] if w["code"] == "quantity_serial_numbers_mismatch")
+    assert warning["field"] == "equipment.serial_numbers"
+    assert warning["explanation"]
+    assert warning["source"] == "naks-checklist-monetization.md"
+    assert warning["verification_status"] == "not_verified_by_expert"
+
+    generated = client.post(
+        "/api/v1/documents/generate",
+        json={
+            "normalized_data": body["normalized_data"],
+            "attestation_direction": body["normalized_data"]["attestation_direction"],
+            "attestation_center_code": body["normalized_data"]["attestation_center_code"],
+        },
+    )
+    assert generated.status_code == 200
+
+
+def test_warnings_are_evaluated_on_normalized_values(client, valid_survey_payload):
+    """The rules compare against canonical labels, so they must run after
+    normalization — submitting a synonym must trip the same rule as the label.
+    """
+
+    valid_survey_payload["equipment"]["equipment_type"] = "аргонодуговой аппарат"
+    valid_survey_payload["equipment"]["welding_method"] = "рад"
+
+    response = client.post(ENDPOINT, json=valid_survey_payload)
+
+    body = response.json()
+    assert body["valid"] is True
+    assert any(warning["code"] == "tig_may_need_technology" for warning in body["warnings"])
+
+
+def test_blocked_submission_returns_no_warnings(client, valid_survey_payload):
+    """Checklist hints are computed only for data that passed the blocking
+    rules — a rejected submission must not carry half-computed advice.
+    """
+
+    valid_survey_payload["equipment"]["quantity"] = 5  # would trip a warning rule
+    valid_survey_payload["contact"]["email"] = "not-an-email"
+
+    response = client.post(ENDPOINT, json=valid_survey_payload)
+
+    body = response.json()
+    assert body["valid"] is False
+    assert body["warnings"] == []
+
+
 def test_logs_contain_no_pii(client, valid_survey_payload, caplog):
     caplog.set_level(logging.INFO, logger="naks")
 
