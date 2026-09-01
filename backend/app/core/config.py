@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     template_registry_path: Path = BACKEND_ROOT / "config" / "templates.yaml"
     ac_registry_path: Path = BACKEND_ROOT / "config" / "attestation_centers.yaml"
+    warning_rules_path: Path = BACKEND_ROOT / "config" / "warning_rules.yaml"
 
 
 def get_settings() -> Settings:

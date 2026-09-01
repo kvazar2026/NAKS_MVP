@@ -22,6 +22,7 @@ from app.core.logging import configure_logging, log_outcome
 from app.services.ac_registry import AttestationCenterRegistry
 from app.services.mock_provider import MockProvider
 from app.services.template_registry import TemplateRegistry
+from app.services.warning_rules import WarningRulesRegistry
 
 
 @asynccontextmanager
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.template_registry = TemplateRegistry.from_yaml(settings.template_registry_path)
     app.state.ac_registry = AttestationCenterRegistry.from_yaml(settings.ac_registry_path)
+    app.state.warning_rules = WarningRulesRegistry.from_yaml(settings.warning_rules_path)
     app.state.llm_provider = MockProvider()
     yield
 

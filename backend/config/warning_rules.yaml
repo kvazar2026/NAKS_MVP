@@ -1,0 +1,143 @@
+# Черновые (warning) правила валидации — ticket 03, ADR 0004.
+#
+# ВАЖНО про статус этих правил. Все они выведены из типовых ошибок в
+# `naks-checklist-monetization.md` (ЧАСТЬ 1) и адаптированы под те
+# административные поля, которые есть в опроснике MVP. Ни одно из них не
+# проверено экспертом НАКС — отсюда `verification_status:
+# not_verified_by_expert` у каждой записи. Это осознанный открытый риск,
+# зафиксированный в spec.md ("Further Notes"): предупреждения не блокируют
+# отправку и подаются пользователю как предварительная автоматическая
+# проверка, требующая подтверждения специалистом или АЦ.
+#
+# Формат записи (все поля обязательны, лишние запрещены — загрузчик падает
+# при старте, а не пропускает запись молча):
+#
+#   code                 стабильный идентификатор правила
+#   direction            направление аттестации, к которому оно относится
+#   field                поле опросника, к которому привязано предупреждение
+#   condition            all_of | any_of — список предикатов по полям
+#   message              короткая формулировка для пользователя
+#   explanation          почему это похоже на ошибку
+#   source               документ-источник
+#   verification_status  проверено ли правило экспертом
+#   last_reviewed_at     дата последней сверки с источником
+#
+# Предикаты: `equals`, `not_equals`, `not_equals_length_of` (сравнение
+# значения с длиной списка по другому пути). Ровно один предикат на запись.
+# Значения полей сравниваются с каноническими подписями из
+# `app/domain/reference_data.py` — правило с опечаткой в пути поля не
+# загрузится, а с опечаткой в значении просто никогда не сработает, поэтому
+# подписи копируются оттуда дословно.
+
+- code: semi_automatic_may_need_technology
+  direction: equipment
+  field: equipment.equipment_type
+  condition:
+    all_of:
+      - field: equipment.equipment_type
+        equals: Полуавтомат сварочный
+      - field: equipment.welding_method
+        equals: МП — механизированная сварка плавящимся электродом в среде защитных газов (МИГ/МАГ)
+  message: Полуавтомат с механизированной сваркой чаще аттестуют как технологию, а не как оборудование
+  explanation: >-
+    По чек-листу типовая ошибка для полуавтомата — подать заявку на
+    «оборудование» там, где АЦ ожидает аттестацию технологии: с описанием
+    процесса (проволока, защитный газ, режимы) и технологической картой.
+    Заявка только на оборудование в этом случае возвращается на доработку.
+    Проверьте с АЦ, что вам действительно нужна аттестация оборудования.
+  source: naks-checklist-monetization.md
+  verification_status: not_verified_by_expert
+  last_reviewed_at: 2026-09-01
+
+- code: tig_may_need_technology
+  direction: equipment
+  field: equipment.equipment_type
+  condition:
+    any_of:
+      - field: equipment.equipment_type
+        equals: Аппарат аргонодуговой сварки (TIG)
+      - field: equipment.welding_method
+        equals: РАД — ручная аргонодуговая сварка
+  message: Для аргонодуговой сварки (РАД) в первую очередь аттестуют технологию, а не оборудование
+  explanation: >-
+    По чек-листу для РАД аттестуется прежде всего технология, а также
+    материалы и персонал. Типовая ошибка — смешать эти аттестации и не
+    указать конкретный защитный газ и присадочный материал. Заявка на
+    оборудование не покрывает ни технологию, ни персонал.
+  source: naks-checklist-monetization.md
+  verification_status: not_verified_by_expert
+  last_reviewed_at: 2026-09-01
+
+- code: pipeline_repair_needs_technology
+  direction: equipment
+  field: equipment.purpose
+  condition:
+    all_of:
+      - field: equipment.purpose
+        equals: Ремонт и восстановление оборудования
+      - field: opo_group
+        equals: Группа 2 — технологические трубопроводы
+  message: Ремонт трубопроводов ОПО аттестуется как технология в комплексе, а не как отдельное оборудование
+  explanation: >-
+    По чек-листу для ремонта трубопроводов аттестуется технология сварки в
+    комплексе — персонал, материалы и оборудование вместе, с картой ремонта
+    и данными трубы (диаметр, стенка, материал). Типовая ошибка — подать
+    только оборудование вместо технологии.
+  source: naks-checklist-monetization.md
+  verification_status: not_verified_by_expert
+  last_reviewed_at: 2026-09-01
+
+- code: scope_opo_mismatch_pressure_vessels
+  direction: equipment
+  field: opo_group
+  condition:
+    all_of:
+      - field: equipment.purpose
+        equals: Сварка сосудов, работающих под давлением
+      - field: opo_group
+        not_equals: Группа 1 — сосуды и аппараты, работающие под давлением
+  message: Назначение «сосуды под давлением» не согласовано с указанной группой ОПО
+  explanation: >-
+    Область аттестации привязывается к типу ОПО, и по чек-листу отсутствие
+    такой привязки — типовая ошибка. Сварка сосудов под давлением обычно
+    относится к группе 1; при другой группе ОПО заявка выглядит
+    противоречиво. Проверьте, что группа ОПО выбрана верно.
+  source: naks-checklist-monetization.md
+  verification_status: not_verified_by_expert
+  last_reviewed_at: 2026-09-01
+
+- code: scope_opo_mismatch_pipelines
+  direction: equipment
+  field: opo_group
+  condition:
+    all_of:
+      - field: equipment.purpose
+        equals: Сварка технологических трубопроводов
+      - field: opo_group
+        not_equals: Группа 2 — технологические трубопроводы
+  message: Назначение «технологические трубопроводы» не согласовано с указанной группой ОПО
+  explanation: >-
+    Область аттестации привязывается к типу ОПО, и по чек-листу отсутствие
+    такой привязки — типовая ошибка. Сварка технологических трубопроводов
+    обычно относится к группе 2; при другой группе ОПО заявка выглядит
+    противоречиво. Проверьте, что группа ОПО выбрана верно.
+  source: naks-checklist-monetization.md
+  verification_status: not_verified_by_expert
+  last_reviewed_at: 2026-09-01
+
+- code: quantity_serial_numbers_mismatch
+  direction: equipment
+  field: equipment.serial_numbers
+  condition:
+    all_of:
+      - field: equipment.quantity
+        not_equals_length_of: equipment.serial_numbers
+  message: Количество единиц оборудования не совпадает с числом заводских номеров
+  explanation: >-
+    По чек-листу типовая ошибка — заявлять область шире, чем подтверждено
+    точными данными. Если номеров меньше, чем единиц оборудования, часть
+    парка окажется вне области аттестации; если больше — заявка
+    противоречива. Укажите заводской номер на каждую заявленную единицу.
+  source: naks-checklist-monetization.md
+  verification_status: not_verified_by_expert
+  last_reviewed_at: 2026-09-01
